@@ -1,0 +1,10 @@
+# GHOSTBYTE Requirements
+# Python 3.8+
+
+# No external dependencies for core functionality
+# Standard library only
+
+# Optional development dependencies:
+# pytest>=7.0.0
+# black>=22.0.0
+# flake8>=5.0.0

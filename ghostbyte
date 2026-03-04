@@ -1,0 +1,259 @@
+#!/usr/bin/env python3
+"""
+GHOSTBYTE 👻 Unified CLI
+Command-line interface for the GHOSTBYTE toolkit
+
+Author: frankSx <fixes.it.frank@googlesmail.com>
+13th Hour Research Division
+
+Usage:
+    ghostbyte unicode --text "admin" --mode homoglyph
+    ghostbyte ascii --payload "secret" --mode box
+    ghostbyte mix --input "attack" --layers 3
+    ghostbyte analyze --text "suspicious"
+    ghostbyte chain --input "target" --config full
+    ghostbyte demo
+"""
+
+import argparse
+import sys
+import os
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+
+from unicode_generator import UnicodeExploitGenerator
+from ascii_obfuscator import ASCIIObfuscator
+from string_mixer import StringMixer
+from unicode_analyzer import UnicodeAnalyzer
+
+
+def create_parser():
+    parser = argparse.ArgumentParser(
+        prog='ghostbyte',
+        description='GHOSTBYTE - Unicode Exploit & ASCII Obfuscation Toolkit',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='''
+Examples:
+  ghostbyte unicode --text "admin" --mode homoglyph
+  ghostbyte ascii --payload "secret" --mode box --style double
+  ghostbyte mix --input "attack" --layers 3
+  ghostbyte analyze --text "suspicious string"
+  ghostbyte chain --input "target" --config full
+  ghostbyte demo
+
+Author: frankSx <fixes.it.frank@googlesmail.com>
+13th Hour Research Division
+        '''
+    )
+
+    subparsers = parser.add_subparsers(dest='command', help='Commands')
+
+    unicode_p = subparsers.add_parser('unicode', help='Unicode exploit generation')
+    unicode_p.add_argument('--text', required=True)
+    unicode_p.add_argument('--mode', choices=['homoglyph', 'zerowidth', 'bidi', 'confusable', 'fingerprint'], default='homoglyph')
+    unicode_p.add_argument('--intensity', type=float, default=0.5)
+    unicode_p.add_argument('--id', type=int)
+    unicode_p.add_argument('--seed', type=int)
+    unicode_p.add_argument('-o', '--output')
+
+    ascii_p = subparsers.add_parser('ascii', help='ASCII art obfuscation')
+    ascii_p.add_argument('--payload', required=True)
+    ascii_p.add_argument('--mode', choices=['box', 'banner', 'matrix', 'glitch', 'zalgo', 'logo'], default='box')
+    ascii_p.add_argument('--style', default='single')
+    ascii_p.add_argument('--seed', type=int)
+    ascii_p.add_argument('-o', '--output')
+
+    mix_p = subparsers.add_parser('mix', help='String mixing')
+    mix_p.add_argument('--input', required=True)
+    mix_p.add_argument('--layers', type=int, default=3)
+    mix_p.add_argument('--techniques', nargs='+')
+    mix_p.add_argument('-o', '--output')
+
+    analyze_p = subparsers.add_parser('analyze', help='Unicode analysis')
+    analyze_p.add_argument('--text')
+    analyze_p.add_argument('--file')
+    analyze_p.add_argument('--json', action='store_true')
+    analyze_p.add_argument('-o', '--output')
+
+    chain_p = subparsers.add_parser('chain', help='Full obfuscation chain')
+    chain_p.add_argument('--input', required=True)
+    chain_p.add_argument('--config', choices=['light', 'medium', 'full', 'extreme'], default='medium')
+    chain_p.add_argument('--seed', type=int)
+    chain_p.add_argument('-o', '--output')
+
+    demo_p = subparsers.add_parser('demo', help='Run interactive demo')
+
+    return parser
+
+
+def run_unicode(args):
+    gen = UnicodeExploitGenerator(seed=args.seed)
+
+    if args.mode == 'homoglyph':
+        return gen.homoglyph_replace(args.text, args.intensity)
+    elif args.mode == 'zerowidth':
+        return gen.insert_zero_width(args.text, args.intensity)
+    elif args.mode == 'bidi':
+        return gen.bidi_override(args.text, 'rtl')
+    elif args.mode == 'confusable':
+        return gen.confusable_mix(args.text)
+    elif args.mode == 'fingerprint':
+        identifier = args.id or 1337
+        result = gen.fingerprint_embed(args.text, identifier)
+        print(f"Embedded fingerprint ID: {identifier}", file=sys.stderr)
+        return result
+
+
+def run_ascii(args):
+    obf = ASCIIObfuscator(seed=args.seed)
+
+    if args.mode == 'box':
+        return obf.create_box(args.payload, args.style)
+    elif args.mode == 'banner':
+        return obf.create_banner(args.payload, args.style)
+    elif args.mode == 'matrix':
+        return obf.create_matrix_rain(width=len(args.payload)+10, height=5)
+    elif args.mode == 'glitch':
+        return obf.create_glitch_text(args.payload)
+    elif args.mode == 'zalgo':
+        return obf.create_zalgo(args.payload)
+    elif args.mode == 'logo':
+        return obf.ghostbyte_logo()
+
+
+def run_mix(args):
+    mixer = StringMixer()
+    result = mixer.mix(args.input, args.layers, args.techniques)
+
+    return f"""GHOSTBYTE Mixed String
+====================
+Original: {result['original']}
+Final: {result['final']}
+Layers: {result['layers']}
+Techniques: {', '.join(result['techniques'])}
+Hash: {result['hash']}"""
+
+
+def run_analyze(args):
+    if args.file:
+        with open(args.file, 'r', encoding='utf-8') as f:
+            text = f.read()
+    elif args.text:
+        text = args.text
+    else:
+        return "Error: Provide --text or --file"
+
+    analyzer = UnicodeAnalyzer()
+    analysis = analyzer.analyze(text)
+
+    if args.json:
+        import json
+        return json.dumps(analysis, indent=2, ensure_ascii=False)
+    else:
+        return analyzer.generate_report(analysis)
+
+
+def run_chain(args):
+    gen = UnicodeExploitGenerator(seed=args.seed)
+    obf = ASCIIObfuscator(seed=args.seed)
+    mixer = StringMixer(seed=args.seed)
+
+    text = args.input
+
+    configs = {
+        'light': {'homoglyph': 0.3, 'zw': 0.1, 'layers': 2},
+        'medium': {'homoglyph': 0.5, 'zw': 0.3, 'layers': 3},
+        'full': {'homoglyph': 0.8, 'zw': 0.5, 'layers': 4},
+        'extreme': {'homoglyph': 1.0, 'zw': 0.8, 'layers': 5}
+    }
+
+    cfg = configs[args.config]
+
+    step1 = gen.homoglyph_replace(text, cfg['homoglyph'])
+    step2 = gen.insert_zero_width(step1, cfg['zw'])
+    step3 = obf.create_box(step2, style='double')
+    step4 = mixer.mix(step3, layers=cfg['layers'])
+
+    return f"""GHOSTBYTE Obfuscation Chain
+==========================
+Config: {args.config.upper()}
+Original: {args.input}
+Final Length: {len(step4['final'])} chars
+Expansion: {len(step4['final']) / len(args.input):.1f}x
+
+Applied:
+  1. Homoglyph ({cfg['homoglyph']*100:.0f}%)
+  2. Zero-width ({cfg['zw']*100:.0f}%)
+  3. ASCII box
+  4. {cfg['layers']} encoding layers
+
+Final Output:
+{step4['final']}"""
+
+
+def run_demo():
+    print("GHOSTBYTE")
+    print("Unicode Exploit & ASCII Obfuscation Toolkit")
+    print("Author: frankSx <fixes.it.frank@googlesmail.com>")
+    print("13th Hour Research Division")
+    print()
+
+    gen = UnicodeExploitGenerator(seed=42)
+    obf = ASCIIObfuscator(seed=42)
+    mixer = StringMixer(seed=42)
+
+    test = "password123"
+
+    print(f"Original: {test}\n")
+
+    print("[1] Unicode Exploits:")
+    print(f"    Homoglyph: {gen.homoglyph_replace(test, 0.5)}")
+    print(f"    Zero-width: {gen.insert_zero_width(test[:5], 0.5)}...")
+
+    print("\n[2] ASCII Obfuscation:")
+    print(obf.create_box("SECRET", style='double'))
+
+    print("\n[3] String Mixing:")
+    result = mixer.mix("attack", layers=3)
+    print(f"    Original: {result['original']}")
+    print(f"    Final: {result['final'][:50]}...")
+
+    print("\nDemo complete! Try: ghostbyte --help")
+    return ""
+
+
+def main():
+    parser = create_parser()
+    args = parser.parse_args()
+
+    if not args.command:
+        parser.print_help()
+        sys.exit(1)
+
+    handlers = {
+        'unicode': run_unicode,
+        'ascii': run_ascii,
+        'mix': run_mix,
+        'analyze': run_analyze,
+        'chain': run_chain,
+        'demo': run_demo
+    }
+
+    try:
+        result = handlers[args.command](args)
+
+        if result:
+            if hasattr(args, 'output') and args.output:
+                with open(args.output, 'w', encoding='utf-8') as f:
+                    f.write(result)
+                print(f"Output written to {args.output}")
+            else:
+                print(result)
+
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
